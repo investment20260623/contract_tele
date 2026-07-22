@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>계약 신청 시스템</title>
-  <!-- 텔레그램 공식 스크립트 -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body { font-family: -apple-system, sans-serif; margin: 0; padding: 16px; background: #f5f5f7; color: #222; }
@@ -27,7 +26,6 @@
     .msg { padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
     .msg-error { background: #fee2e2; color: #991b1b; }
     .msg-success { background: #d1fae5; color: #065f46; }
-    .debug-box { background: #fff7ed; border: 1px dashed #f59e0b; border-radius: 8px; padding: 10px; margin-bottom: 14px; font-size: 12px; }
     .manager-box { background: #eff6ff; border-radius: 8px; padding: 10px; margin-bottom: 14px; font-size: 13px; }
     .field-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
     .field-row span:first-child { color: #888; }
@@ -35,17 +33,12 @@
 </head>
 <body>
 
-  <!--
-    ⚠️ 여기 API_BASE_URL을 본인의 Apps Script 배포 URL로 바꿔야 함
-    (Apps Script 편집기 → 배포 → 배포 관리에서 복사한 .../exec 주소)
-  -->
   <script>
-    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzZ6coZ5dTbvohCwYWWsK-BVVuTPvcErgPtQQD_08-dClMuwrWbgNLIQ9jOb2nytC53/exec';
+    const API_BASE_URL = 'https://script.google.com/macros/s/여기에_본인_배포ID_입력/exec';
   </script>
 
   <div id="myIdBox" class="hint-text" style="display:none; text-align:center; margin-bottom:10px;"></div>
 
-  <!-- 텔레그램이 아닌 곳에서 열었을 때 표시되는 차단 화면 -->
   <div id="blockedBox" class="msg msg-error" style="display:none; text-align:center;">
     ⚠️ 이 페이지는 텔레그램 안에서만 사용할 수 있습니다.<br>
     텔레그램 앱에서 봇의 메뉴 버튼을 눌러 다시 열어 주세요.
@@ -67,7 +60,7 @@
       <label>상품명 *</label>
       <select id="productName" onchange="onProductOrDurationChange()"></select>
 
-      <label>계약기간 *</label>
+      <label id="durationLabel">계약기간</label>
       <select id="durationMonths" onchange="onProductOrDurationChange()"></select>
 
       <label>결제 금액 (원) *</label>
@@ -75,42 +68,47 @@
       <div id="amountHint" class="hint-text"></div>
       <div id="amountError" class="error-text"></div>
 
-    <label>회원명 *</label>
-    <input id="memberName" placeholder="고객 성함">
+      <label>회원명 *</label>
+      <input id="memberName" placeholder="고객 성함">
 
-    <label>회원 생년월일 * (YYMMDD, 숫자 6자리만)</label>
-    <input id="memberBirth" maxlength="6" placeholder="예: 960101">
-    <div id="birthError" class="error-text"></div>
+      <label>회원 생년월일 (YYMMDD, 숫자 6자리만)</label>
+      <input id="memberBirth" maxlength="6" placeholder="예: 960101">
+      <div class="hint-text">미입력시 추후 수정요청 양식 제출 필수</div>
+      <div id="birthError" class="error-text"></div>
 
-    <label>회원 전화번호 * (010-0000-0000)</label>
-    <input id="memberPhone" placeholder="010-0000-0000" maxlength="13">
-    <div id="phoneError" class="error-text"></div>
+      <label>회원 전화번호 * (010-0000-0000)</label>
+      <input id="memberPhone" placeholder="010-0000-0000" maxlength="13">
+      <div id="phoneError" class="error-text"></div>
 
-    <label>회원 주소</label>
-    <input id="memberAddress" placeholder="주소 (선택)">
+      <label>회원 주소</label>
+      <input id="memberAddress" placeholder="주소 (선택)">
+      <div class="hint-text">미입력시 추후 수정요청 양식 제출 필수</div>
 
-    <label>지원자</label>
-    <input id="applicantName" placeholder="지원자 성함 (선택)">
+      <label>지원자</label>
+      <input id="applicantName" placeholder="지원자 성함 (선택)">
 
-    <label>계약 시작일 *</label>
-    <input id="startDate" type="date">
+      <label>계약 시작일 *</label>
+      <input id="startDate" type="date">
 
-    <label>DB출처</label>
-    <input id="dbSource" placeholder="DB출처 자유 입력 (선택)">
+      <label>DB출처</label>
+      <input id="dbSource" placeholder="DB출처 자유 입력 (선택)">
+      <div class="hint-text">미입력시 추후 수정요청 양식 제출 필수</div>
 
-    <label>특이사항</label>
-    <input id="specialNotes" placeholder="특이사항 (선택)">
+      <label>특이사항</label>
+      <input id="specialNotes" placeholder="특이사항 (선택)">
+      <div class="hint-text">중복 구매 / 입금자명이 본인 이름과 다른 경우 등은 반드시 기록해 주세요!</div>
 
-    <button id="submitBtn" onclick="doSubmit()">제출하기</button>
-  </div>
+      <button id="submitBtn" onclick="doSubmit()">제출하기</button>
+    </div>
 
-  <div id="panelList" style="display:none;">
-    <div id="listContainer"></div>
-  </div>
+    <div id="panelList" style="display:none;">
+      <div id="listContainer"></div>
+    </div>
   </div> <!-- /appContent -->
 
   <script>
     let currentUser = null;
+    let durationRequiredProducts = [];
 
     window.onload = function () {
       const tg = window.Telegram && window.Telegram.WebApp;
@@ -123,12 +121,10 @@
         document.getElementById('appContent').style.display = 'block';
         loadManagerAndOptions();
       } else {
-        // 텔레그램 환경이 아니면 사용 자체를 차단
         document.getElementById('blockedBox').style.display = 'block';
       }
     };
 
-    // ===== API 호출 도우미 =====
     async function apiGet(action, params) {
       const url = new URL(API_BASE_URL);
       url.searchParams.set('action', action);
@@ -140,7 +136,6 @@
     }
 
     async function apiPost(payload) {
-      // text/plain으로 보내야 브라우저가 사전 확인(preflight) 요청을 안 보내서 Apps Script와 호환됨
       const res = await fetch(API_BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -155,8 +150,7 @@
       try {
         const info = await apiGet('getManagerInfo', { userId: currentUser.id });
         document.getElementById('managerBox').style.display = 'block';
-        document.getElementById('managerBox').innerHTML =
-          '담당자: <b>' + info.name + '</b> (' + info.dept + ' ' + info.team + ')';
+        document.getElementById('managerBox').innerHTML = '담당자: <b>' + info.name + '</b> (' + info.dept + ' ' + info.team + ')';
       } catch (err) {
         document.getElementById('managerBox').style.display = 'block';
         document.getElementById('managerBox').innerHTML = '<span style="color:#dc2626;">' + err.message + '</span>';
@@ -165,19 +159,30 @@
       }
 
       const opts = await apiGet('getFormOptions');
+      durationRequiredProducts = opts.durationRequiredProducts || [];
       document.getElementById('productName').innerHTML =
         opts.products.map(p => '<option value="' + p + '">' + p + '</option>').join('');
       document.getElementById('durationMonths').innerHTML =
+        '<option value="">선택 안 함</option>' +
         opts.durations.map(d => '<option value="' + d + '">' + d + '개월</option>').join('');
       onProductOrDurationChange();
+    }
+
+    function isDurationRequired() {
+      const product = document.getElementById('productName').value;
+      return durationRequiredProducts.indexOf(product) !== -1;
     }
 
     async function onProductOrDurationChange() {
       const product = document.getElementById('productName').value;
       const duration = document.getElementById('durationMonths').value;
-      if (!product || !duration) return;
+
+      const label = document.getElementById('durationLabel');
+      label.innerText = isDurationRequired() ? '계약기간 *' : '계약기간';
+
+      if (!product) return;
       try {
-        const minAmount = await apiGet('getMinAmount', { productName: product, durationMonths: duration });
+        const minAmount = await apiGet('getMinAmount', { productName: product, durationMonths: duration || 1 });
         if (minAmount != null) {
           document.getElementById('amountHint').innerText =
             '최소 결제 가능 금액: ' + minAmount.toLocaleString('ko-KR') + '원 (30% 할인 한도)';
@@ -205,11 +210,8 @@
     document.getElementById('memberPhone').addEventListener('input', function (e) {
       let digits = e.target.value.replace(/\D/g, '').slice(0, 11);
       let formatted = digits;
-      if (digits.length > 3 && digits.length <= 7) {
-        formatted = digits.slice(0, 3) + '-' + digits.slice(3);
-      } else if (digits.length > 7) {
-        formatted = digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
-      }
+      if (digits.length > 3 && digits.length <= 7) formatted = digits.slice(0, 3) + '-' + digits.slice(3);
+      else if (digits.length > 7) formatted = digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
       e.target.value = formatted;
     });
 
@@ -222,7 +224,7 @@
       if (!phoneOk) valid = false;
 
       const birth = document.getElementById('memberBirth').value.trim();
-      const birthOk = /^\d{6}$/.test(birth);
+      const birthOk = birth === '' || /^\d{6}$/.test(birth); // 선택 항목 — 입력했을 때만 형식 검사
       toggleError('memberBirth', 'birthError', birthOk, '생년월일은 6자리 숫자만 입력해야 합니다. (예: 960101)');
       if (!birthOk) valid = false;
 
@@ -230,6 +232,11 @@
       const amountUnitOk = amount > 0 && amount % 10000 === 0;
       toggleError('contractAmount', 'amountError', amountUnitOk, '금액은 만원 단위로 입력해야 합니다. (예: 220000)');
       if (!amountUnitOk) valid = false;
+
+      if (isDurationRequired() && !document.getElementById('durationMonths').value) {
+        showMsg('이 상품은 계약기간을 반드시 선택해야 합니다.', 'error');
+        valid = false;
+      }
 
       if (!document.getElementById('memberName').value.trim()) valid = false;
       if (!document.getElementById('startDate').value) valid = false;
@@ -240,14 +247,8 @@
     function toggleError(inputId, errorId, isOk, message) {
       const input = document.getElementById(inputId);
       const errorEl = document.getElementById(errorId);
-      if (isOk) {
-        input.classList.remove('invalid');
-        errorEl.classList.remove('show');
-      } else {
-        input.classList.add('invalid');
-        errorEl.innerText = message;
-        errorEl.classList.add('show');
-      }
+      if (isOk) { input.classList.remove('invalid'); errorEl.classList.remove('show'); }
+      else { input.classList.add('invalid'); errorEl.innerText = message; errorEl.classList.add('show'); }
     }
 
     async function doSubmit() {
@@ -297,15 +298,11 @@
       }
     }
 
+    // 정상계약(AD열)이 'ㅇ'이면 초록, 그 외(관리자가 다른 값을 입력했으면)는 빨간 X
     function renderCard(item) {
-      const reviewHtml = (item.reviewFields || []).map(rf =>
-        '<div class="field-row"><span>' + rf.label + '</span><span>' + rf.value + '</span></div>'
-      ).join('');
-
-      // 가격체크(AB열)가 'ㅇ'이면 정상(초록 원), 그 외 값(예: 관리자가 '폐기'로 수동 변경)이면 폐기(빨간 X)
-      const isCancelled = item.priceCheck !== 'ㅇ';
+      const isCancelled = item.statusMark !== 'ㅇ';
       const statusHtml = isCancelled
-        ? '<span class="status status-cancel">✕ ' + item.priceCheck + '</span>'
+        ? '<span class="status status-cancel">✕ ' + (item.statusMark || '미검수') + '</span>'
         : '<span class="status status-ok">●</span>';
 
       return '<div class="card">' +
@@ -313,21 +310,20 @@
           '<strong>' + item.memberName + '</strong>' +
           statusHtml +
         '</div>' +
+        '<div class="field-row"><span>제출시간</span><span>' + item.timestamp + '</span></div>' +
+        '<div class="field-row"><span>금액</span><span>' + Number(item.amount).toLocaleString('ko-KR') + '원</span></div>' +
         '<div class="field-row"><span>카테고리</span><span>' + (item.category || '-') + '</span></div>' +
         '<div class="field-row"><span>상품명</span><span>' + item.product + '</span></div>' +
+        '<div class="field-row"><span>계약기간</span><span>' + (item.duration || '-') + '</span></div>' +
+        '<div class="field-row"><span>계약시작일</span><span>' + item.startDate + '</span></div>' +
+        '<div class="field-row"><span>계약종료일</span><span>' + item.endDate + '</span></div>' +
         '<div class="field-row"><span>회원 생년월일</span><span>' + (item.memberBirth || '-') + '</span></div>' +
         '<div class="field-row"><span>회원 전화번호</span><span>' + (item.memberPhone || '-') + '</span></div>' +
         '<div class="field-row"><span>회원 주소</span><span>' + (item.memberAddress || '-') + '</span></div>' +
-        '<div class="field-row"><span>담당자</span><span>' + (item.manager || '-') + ' (' + (item.dept || '-') + ' ' + (item.team || '-') + ')</span></div>' +
+        '<div class="field-row"><span>담당자</span><span>' + (item.manager || '-') + '</span></div>' +
         '<div class="field-row"><span>지원자</span><span>' + (item.applicantName || '-') + '</span></div>' +
-        '<div class="field-row"><span>금액</span><span>' + Number(item.amount).toLocaleString('ko-KR') + '원</span></div>' +
-        '<div class="field-row"><span>계약기간</span><span>' + (item.duration || '-') + '</span></div>' +
-        '<div class="field-row"><span>계약시작</span><span>' + item.startDate + '</span></div>' +
-        '<div class="field-row"><span>종료예정</span><span>' + item.endDate + '</span></div>' +
         '<div class="field-row"><span>DB출처</span><span>' + (item.dbSource || '-') + '</span></div>' +
         '<div class="field-row"><span>특이사항</span><span>' + (item.specialNotes || '-') + '</span></div>' +
-        '<div class="field-row"><span>제출시간</span><span>' + item.timestamp + '</span></div>' +
-        (reviewHtml ? '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd; font-size:12px; color:#2563eb; font-weight:bold;">심사 현황</div>' + reviewHtml : '') +
       '</div>';
     }
   </script>
