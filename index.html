@@ -22,7 +22,8 @@
     button { width: 100%; padding: 11px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 15px; margin-top: 16px; cursor: pointer; }
     button:disabled { background: #aaa; }
     .status { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 12px; }
-    .status-ㅇ { background: #d1fae5; color: #065f46; }
+    .status-ok { background: #d1fae5; color: #065f46; }
+    .status-cancel { background: #fee2e2; color: #991b1b; font-weight: bold; }
     .msg { padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
     .msg-error { background: #fee2e2; color: #991b1b; }
     .msg-success { background: #d1fae5; color: #065f46; }
@@ -301,13 +302,19 @@
         '<div class="field-row"><span>' + rf.label + '</span><span>' + rf.value + '</span></div>'
       ).join('');
 
+      // 가격체크(AB열)가 'ㅇ'이면 정상(초록 원), 그 외 값(예: 관리자가 '폐기'로 수동 변경)이면 폐기(빨간 X)
+      const isCancelled = item.priceCheck !== 'ㅇ';
+      const statusHtml = isCancelled
+        ? '<span class="status status-cancel">✕ ' + item.priceCheck + '</span>'
+        : '<span class="status status-ok">●</span>';
+
       return '<div class="card">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<strong>' + item.product + '</strong>' +
-          '<span class="status status-' + item.priceCheck + '">' + item.priceCheck + '</span>' +
+          '<strong>' + item.memberName + '</strong>' +
+          statusHtml +
         '</div>' +
         '<div class="field-row"><span>카테고리</span><span>' + (item.category || '-') + '</span></div>' +
-        '<div class="field-row"><span>회원명</span><span>' + item.memberName + '</span></div>' +
+        '<div class="field-row"><span>상품명</span><span>' + item.product + '</span></div>' +
         '<div class="field-row"><span>회원 생년월일</span><span>' + (item.memberBirth || '-') + '</span></div>' +
         '<div class="field-row"><span>회원 전화번호</span><span>' + (item.memberPhone || '-') + '</span></div>' +
         '<div class="field-row"><span>회원 주소</span><span>' + (item.memberAddress || '-') + '</span></div>' +
