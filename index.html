@@ -39,8 +39,10 @@
     (Apps Script 편집기 → 배포 → 배포 관리에서 복사한 .../exec 주소)
   -->
   <script>
-    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzZ6coZ5dTbvohCwYWWsK-BVVuTPvcErgPtQQD_08-dClMuwrWbgNLIQ9jOb2nytC53/exec';
+    const API_BASE_URL = 'https://script.google.com/macros/s/여기에_본인_배포ID_입력/exec';
   </script>
+
+  <div id="myIdBox" class="hint-text" style="display:none; text-align:center; margin-bottom:10px;"></div>
 
   <div id="debugBox" class="debug-box" style="display:none;">
     ⚠️ 텔레그램 환경이 아닙니다. 테스트 모드로 진행합니다.<br>
@@ -114,6 +116,9 @@
         tg.ready();
         tg.expand();
         currentUser = { id: String(tg.initDataUnsafe.user.id) };
+        // 명단 등록 여부와 상관없이 항상 본인 ID를 화면에 표시 (신규 직원 등록용)
+        document.getElementById('myIdBox').style.display = 'block';
+        document.getElementById('myIdBox').innerText = '내 텔레그램ID: ' + currentUser.id;
         loadManagerAndOptions();
       } else {
         document.getElementById('debugBox').style.display = 'block';
@@ -302,10 +307,19 @@
           '<strong>' + item.product + '</strong>' +
           '<span class="status status-' + item.priceCheck + '">' + item.priceCheck + '</span>' +
         '</div>' +
+        '<div class="field-row"><span>카테고리</span><span>' + (item.category || '-') + '</span></div>' +
         '<div class="field-row"><span>회원명</span><span>' + item.memberName + '</span></div>' +
+        '<div class="field-row"><span>회원 생년월일</span><span>' + (item.memberBirth || '-') + '</span></div>' +
+        '<div class="field-row"><span>회원 전화번호</span><span>' + (item.memberPhone || '-') + '</span></div>' +
+        '<div class="field-row"><span>회원 주소</span><span>' + (item.memberAddress || '-') + '</span></div>' +
+        '<div class="field-row"><span>담당자</span><span>' + (item.manager || '-') + ' (' + (item.dept || '-') + ' ' + (item.team || '-') + ')</span></div>' +
+        '<div class="field-row"><span>지원자</span><span>' + (item.applicantName || '-') + '</span></div>' +
         '<div class="field-row"><span>금액</span><span>' + Number(item.amount).toLocaleString('ko-KR') + '원</span></div>' +
+        '<div class="field-row"><span>계약기간</span><span>' + (item.duration || '-') + '</span></div>' +
         '<div class="field-row"><span>계약시작</span><span>' + item.startDate + '</span></div>' +
         '<div class="field-row"><span>종료예정</span><span>' + item.endDate + '</span></div>' +
+        '<div class="field-row"><span>DB출처</span><span>' + (item.dbSource || '-') + '</span></div>' +
+        '<div class="field-row"><span>특이사항</span><span>' + (item.specialNotes || '-') + '</span></div>' +
         '<div class="field-row"><span>제출시간</span><span>' + item.timestamp + '</span></div>' +
       '</div>';
     }
