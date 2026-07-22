@@ -44,35 +44,35 @@
 
   <div id="myIdBox" class="hint-text" style="display:none; text-align:center; margin-bottom:10px;"></div>
 
-  <div id="debugBox" class="debug-box" style="display:none;">
-    ⚠️ 텔레그램 환경이 아닙니다. 테스트 모드로 진행합니다.<br>
-    명단 시트에 등록된 텔레그램ID를 입력하세요:
-    <input id="debugUserId" placeholder="예: 999999" style="margin-top:6px;">
-    <button style="margin-top:8px;" onclick="setDebugUser()">이 ID로 테스트 시작</button>
+  <!-- 텔레그램이 아닌 곳에서 열었을 때 표시되는 차단 화면 -->
+  <div id="blockedBox" class="msg msg-error" style="display:none; text-align:center;">
+    ⚠️ 이 페이지는 텔레그램 안에서만 사용할 수 있습니다.<br>
+    텔레그램 앱에서 봇의 메뉴 버튼을 눌러 다시 열어 주세요.
   </div>
 
   <div id="managerBox" class="manager-box" style="display:none;"></div>
 
-  <div class="tabs">
-    <div class="tab active" id="tabSubmit" onclick="switchTab('submit')">신청서 작성</div>
-    <div class="tab" id="tabList" onclick="switchTab('list')">내 신청 내역</div>
-  </div>
+  <div id="appContent" style="display:none;">
+    <div class="tabs">
+      <div class="tab active" id="tabSubmit" onclick="switchTab('submit')">신청서 작성</div>
+      <div class="tab" id="tabList" onclick="switchTab('list')">내 신청 내역</div>
+    </div>
 
-  <div id="msgBox"></div>
+    <div id="msgBox"></div>
 
-  <div id="panelSubmit" class="card">
-    <h2>계약 신청</h2>
+    <div id="panelSubmit" class="card">
+      <h2>계약 신청</h2>
 
-    <label>상품명 *</label>
-    <select id="productName" onchange="onProductOrDurationChange()"></select>
+      <label>상품명 *</label>
+      <select id="productName" onchange="onProductOrDurationChange()"></select>
 
-    <label>계약기간 *</label>
-    <select id="durationMonths" onchange="onProductOrDurationChange()"></select>
+      <label>계약기간 *</label>
+      <select id="durationMonths" onchange="onProductOrDurationChange()"></select>
 
-    <label>결제 금액 (원) *</label>
-    <input id="contractAmount" type="number" step="10000" placeholder="만원 단위로 입력 (예: 220000)">
-    <div id="amountHint" class="hint-text"></div>
-    <div id="amountError" class="error-text"></div>
+      <label>결제 금액 (원) *</label>
+      <input id="contractAmount" type="number" step="10000" placeholder="만원 단위로 입력 (예: 220000)">
+      <div id="amountHint" class="hint-text"></div>
+      <div id="amountError" class="error-text"></div>
 
     <label>회원명 *</label>
     <input id="memberName" placeholder="고객 성함">
@@ -106,6 +106,7 @@
   <div id="panelList" style="display:none;">
     <div id="listContainer"></div>
   </div>
+  </div> <!-- /appContent -->
 
   <script>
     let currentUser = null;
@@ -116,21 +117,15 @@
         tg.ready();
         tg.expand();
         currentUser = { id: String(tg.initDataUnsafe.user.id) };
-        // 명단 등록 여부와 상관없이 항상 본인 ID를 화면에 표시 (신규 직원 등록용)
         document.getElementById('myIdBox').style.display = 'block';
         document.getElementById('myIdBox').innerText = '내 텔레그램ID: ' + currentUser.id;
+        document.getElementById('appContent').style.display = 'block';
         loadManagerAndOptions();
       } else {
-        document.getElementById('debugBox').style.display = 'block';
+        // 텔레그램 환경이 아니면 사용 자체를 차단
+        document.getElementById('blockedBox').style.display = 'block';
       }
     };
-
-    function setDebugUser() {
-      const id = document.getElementById('debugUserId').value.trim();
-      if (!id) { showMsg('텔레그램ID를 입력하세요', 'error'); return; }
-      currentUser = { id: id };
-      loadManagerAndOptions();
-    }
 
     // ===== API 호출 도우미 =====
     async function apiGet(action, params) {
@@ -302,6 +297,10 @@
     }
 
     function renderCard(item) {
+      const reviewHtml = (item.reviewFields || []).map(rf =>
+        '<div class="field-row"><span>' + rf.label + '</span><span>' + rf.value + '</span></div>'
+      ).join('');
+
       return '<div class="card">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<strong>' + item.product + '</strong>' +
@@ -321,6 +320,7 @@
         '<div class="field-row"><span>DB출처</span><span>' + (item.dbSource || '-') + '</span></div>' +
         '<div class="field-row"><span>특이사항</span><span>' + (item.specialNotes || '-') + '</span></div>' +
         '<div class="field-row"><span>제출시간</span><span>' + item.timestamp + '</span></div>' +
+        (reviewHtml ? '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd; font-size:12px; color:#2563eb; font-weight:bold;">심사 현황</div>' + reviewHtml : '') +
       '</div>';
     }
   </script>
