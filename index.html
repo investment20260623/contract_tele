@@ -9,11 +9,12 @@
     body { font-family: -apple-system, sans-serif; margin: 0; padding: 16px; background: #f5f5f7; color: #222; }
     h2 { font-size: 18px; margin: 0 0 12px; }
     .tabs { display: flex; margin-bottom: 16px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
-    .tab { flex: 1; text-align: center; padding: 10px; background: #fff; cursor: pointer; font-size: 14px; }
+    .tab { flex: 1; text-align: center; padding: 10px 4px; background: #fff; cursor: pointer; font-size: 14px; }
     .tab.active { background: #2563eb; color: #fff; }
     .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     label { display: block; font-size: 13px; color: #555; margin: 10px 0 4px; }
-    input, select { width: 100%; box-sizing: border-box; padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    input, select, textarea { width: 100%; box-sizing: border-box; padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
+    textarea { resize: vertical; min-height: 80px; }
     input.invalid, select.invalid { border-color: #dc2626; background: #fef2f2; }
     .error-text { color: #dc2626; font-size: 12px; margin-top: 3px; display: none; }
     .error-text.show { display: block; }
@@ -26,15 +27,36 @@
     .msg { padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
     .msg-error { background: #fee2e2; color: #991b1b; }
     .msg-success { background: #d1fae5; color: #065f46; }
+    .msg-warn { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .manager-box { background: #eff6ff; border-radius: 8px; padding: 10px; margin-bottom: 14px; font-size: 13px; }
     .field-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
     .field-row span:first-child { color: #888; }
+    .amount-strong { font-weight: 700; color: #1e3a8a; }
+
+    /* 신청 내역 카드 하단 버튼 / 펼침 패널 */
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-sub { flex: 1; width: auto; margin-top: 0; padding: 9px 4px; font-size: 14px; background: #fff; color: #2563eb; border: 1px solid #2563eb; }
+    .btn-sub:disabled { background: #eee; color: #999; border-color: #ccc; }
+    .btn-go { margin-top: 8px; padding: 10px; font-size: 14px; }
+    .sub-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd; }
+    .sub-msg { margin-top: 8px; }
+    .sub-msg .msg { margin-bottom: 0; }
+
+    /* 입금조회 */
+    .dep-item { border-bottom: 1px solid #f0f0f0; padding: 8px 0; font-size: 13px; }
+    .dep-item:last-child { border-bottom: none; }
+    .dep-name { font-weight: 700; font-size: 14px; }
+    .dep-amount { font-weight: 700; color: #1e3a8a; }
   </style>
 </head>
 <body>
 
   <script>
-    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzZ6coZ5dTbvohCwYWWsK-BVVuTPvcErgPtQQD_08-dClMuwrWbgNLIQ9jOb2nytC53/exec';
+    // ▼▼ 배포 전에 반드시 채워 넣을 값 ▼▼
+    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzZ6coZ5dTbvohCwYWWsK-BVVuTPvcErgPtQQD_08-dClMuwrWbgNLIQ9jOb2nytC53/exec';                 // 기존 계약 신청용 Apps Script 주소 (.../exec) — 원래 쓰던 값 그대로
+    const WORKER_URL   = 'https://investment20260623.github.io/contract_tele';   // Cloudflare Worker 주소 (끝에 / 없이) — 문의요청·입금조회에 사용
+    const BOT_USERNAME = 'InvestDesk_bot';                            // 봇 사용자명 (@ 없이, 예: my_contract_bot) — 해피콜 제출 시 채팅창으로 이동할 때 사용
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
   </script>
 
   <div id="myIdBox" class="hint-text" style="display:none; text-align:center; margin-bottom:10px;"></div>
@@ -50,8 +72,10 @@
     <div class="tabs">
       <div class="tab active" id="tabSubmit" onclick="switchTab('submit')">신청서 작성</div>
       <div class="tab" id="tabList" onclick="switchTab('list')">내 신청 내역</div>
+      <div class="tab" id="tabDeposit" onclick="switchTab('deposit')">입금조회</div>
     </div>
 
+    <!-- ① 신청서 작성 -->
     <div id="panelSubmit" class="card">
       <h2>계약 신청</h2>
 
@@ -62,7 +86,7 @@
       <select id="durationMonths" onchange="onProductOrDurationChange()"></select>
 
       <label>결제 금액 (원) *</label>
-      <input id="contractAmount" type="number" step="10000" placeholder="만원 단위로 입력 (예: 220000)">
+      <input id="contractAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="만원 단위로 입력 (예: 2,200,000)">
       <div id="amountHint" class="hint-text"></div>
       <div id="amountError" class="error-text"></div>
 
@@ -100,15 +124,53 @@
       <button id="submitBtn" onclick="doSubmit()">제출하기</button>
     </div>
 
+    <!-- ② 내 신청 내역 -->
     <div id="panelList" style="display:none;">
       <div class="hint-text" style="text-align:center; margin-bottom:10px;">최근 3개월 이내 신청 내역만 표시됩니다.</div>
       <div id="listContainer"></div>
+    </div>
+
+    <!-- ③ 입금조회 -->
+    <div id="panelDeposit" class="card" style="display:none;">
+      <h2>입금 조회</h2>
+
+      <label>입금자 성명 *</label>
+      <input id="depName" placeholder="입금자 성명" autocomplete="off">
+
+      <label>조회 날짜</label>
+      <input id="depDate" type="date">
+      <div class="hint-text">기본값은 오늘 날짜입니다.</div>
+
+      <div id="depMsg"></div>
+      <button id="depBtn" onclick="doDepositSearch()">조회하기</button>
+      <div id="depResult" style="margin-top:14px;"></div>
     </div>
   </div> <!-- /appContent -->
 
   <script>
     let currentUser = null;
     let durationRequiredProducts = [];
+    let currentList = [];   // 내 신청 내역 (카드의 문의요청/해피콜제출 버튼이 index로 참조)
+
+    // ---------- 공통 유틸 ----------
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function kstNow() { return new Date(Date.now() + 9 * 3600 * 1000); } // UTC getter로 읽으면 한국시간
+    function todayIso() { const d = kstNow(); return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()); }
+    function todayYmd() { const d = kstNow(); return String(d.getUTCFullYear()).slice(2) + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()); }
+    function workerConfigured() { return typeof WORKER_URL === 'string' && WORKER_URL.indexOf('http') === 0 && WORKER_URL.indexOf('여기에') === -1; }
+
+    function getInitialView() {
+      const tg = window.Telegram && window.Telegram.WebApp;
+      const fromQuery = new URLSearchParams(location.search).get('view');
+      const fromStart = tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+      const v = fromQuery || fromStart;
+      return (v === 'list' || v === 'deposit' || v === 'submit') ? v : 'submit';
+    }
 
     window.onload = function () {
       const tg = window.Telegram && window.Telegram.WebApp;
@@ -119,12 +181,16 @@
         document.getElementById('myIdBox').style.display = 'block';
         document.getElementById('myIdBox').innerText = '내 텔레그램ID: ' + currentUser.id;
         document.getElementById('appContent').style.display = 'block';
+        document.getElementById('depDate').value = todayIso();
         loadManagerAndOptions();
+        switchTab(getInitialView());   // Open 버튼(?view=list)으로 열면 내 신청 내역부터 바로 조회 시작
+        if (workerConfigured()) workerPost('/api/hello', {}).catch(function () {}); // 인증 캐시 예열 (문의요청·입금조회 첫 응답 속도용)
       } else {
         document.getElementById('blockedBox').style.display = 'block';
       }
     };
 
+    // ---------- 서버 호출 ----------
     async function apiGet(action, params) {
       const url = new URL(API_BASE_URL);
       url.searchParams.set('action', action);
@@ -146,6 +212,21 @@
       return json.data;
     }
 
+    // Cloudflare Worker 호출 — Telegram initData(서명 포함)를 함께 보내 본인 확인
+    async function workerPost(path, payload) {
+      if (!workerConfigured()) throw new Error('WORKER_URL 설정이 필요합니다. 관리자에게 문의해 주세요.');
+      const tg = window.Telegram.WebApp;
+      const res = await fetch(WORKER_URL + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // preflight 없이 바로 요청되도록 simple request 형식 사용
+        body: JSON.stringify(Object.assign({ initData: tg.initData }, payload))
+      });
+      let json;
+      try { json = await res.json(); } catch (e) { throw new Error('서버 응답을 읽을 수 없습니다.'); }
+      if (!json.success) throw new Error(json.message || '요청에 실패했습니다.');
+      return json.data;
+    }
+
     async function loadManagerAndOptions() {
       const [managerResult, optionsResult] = await Promise.allSettled([
         apiGet('getManagerInfo', { userId: currentUser.id }),
@@ -155,10 +236,10 @@
       if (managerResult.status === 'fulfilled') {
         const info = managerResult.value;
         document.getElementById('managerBox').style.display = 'block';
-        document.getElementById('managerBox').innerHTML = '담당자: <b>' + info.name + '</b> (' + info.dept + ' ' + info.team + ')';
+        document.getElementById('managerBox').innerHTML = '담당자: <b>' + esc(info.name) + '</b> (' + esc(info.dept) + ' ' + esc(info.team) + ')';
       } else {
         document.getElementById('managerBox').style.display = 'block';
-        document.getElementById('managerBox').innerHTML = '<span style="color:#dc2626;">' + managerResult.reason.message + '</span>';
+        document.getElementById('managerBox').innerHTML = '<span style="color:#dc2626;">' + esc(managerResult.reason.message) + '</span>';
         document.getElementById('submitBtn').disabled = true;
         return;
       }
@@ -167,7 +248,7 @@
         const opts = optionsResult.value;
         durationRequiredProducts = opts.durationRequiredProducts || [];
         document.getElementById('productName').innerHTML =
-          opts.products.map(p => '<option value="' + p + '">' + p + '</option>').join('');
+          opts.products.map(p => '<option value="' + esc(p) + '">' + esc(p) + '</option>').join('');
         document.getElementById('durationMonths').innerHTML =
           '<option value="">선택 안 함</option>' +
           opts.durations.map(d => '<option value="' + d + '">' + d + '개월</option>').join('');
@@ -197,20 +278,24 @@
       } catch (err) { /* 조용히 무시 */ }
     }
 
+    // ---------- 탭 ----------
     function switchTab(tab) {
       document.getElementById('tabSubmit').className = 'tab' + (tab === 'submit' ? ' active' : '');
       document.getElementById('tabList').className = 'tab' + (tab === 'list' ? ' active' : '');
+      document.getElementById('tabDeposit').className = 'tab' + (tab === 'deposit' ? ' active' : '');
       document.getElementById('panelSubmit').style.display = tab === 'submit' ? 'block' : 'none';
       document.getElementById('panelList').style.display = tab === 'list' ? 'block' : 'none';
+      document.getElementById('panelDeposit').style.display = tab === 'deposit' ? 'block' : 'none';
       if (tab === 'list') loadMyApplications();
     }
 
     // 제출 성공/실패 안내는 항상 '제출하기' 버튼 바로 위(#msgBox)에 표시됨
     function showMsg(text, type) {
-      document.getElementById('msgBox').innerHTML = '<div class="msg msg-' + type + '">' + text + '</div>';
+      document.getElementById('msgBox').innerHTML = '<div class="msg msg-' + type + '">' + esc(text) + '</div>';
       setTimeout(() => { document.getElementById('msgBox').innerHTML = ''; }, 4000);
     }
 
+    // ---------- 입력 서식 ----------
     document.getElementById('memberBirth').addEventListener('input', function (e) {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
     });
@@ -222,6 +307,24 @@
       else if (digits.length > 7) formatted = digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
       e.target.value = formatted;
     });
+
+    // 결제 금액: 숫자만 입력해도 자동으로 천 단위 쉼표 표시 (2200000 → 2,200,000)
+    document.getElementById('contractAmount').addEventListener('input', function (e) {
+      const el = e.target;
+      const caret = el.selectionStart == null ? el.value.length : el.selectionStart;
+      const digitsBeforeCaret = el.value.slice(0, caret).replace(/\D/g, '').length;
+      const digits = el.value.replace(/\D/g, '').slice(0, 12);
+      const formatted = digits ? Number(digits).toLocaleString('en-US') : '';
+      el.value = formatted;
+      // 쉼표가 끼어들어도 커서가 숫자 기준 같은 위치에 있도록 복원
+      let count = 0, pos = 0;
+      while (pos < formatted.length && count < digitsBeforeCaret) {
+        if (/\d/.test(formatted[pos])) count++;
+        pos++;
+      }
+      try { el.setSelectionRange(pos, pos); } catch (err) { /* 일부 환경에서는 무시 */ }
+    });
+    function getAmountDigits() { return document.getElementById('contractAmount').value.replace(/\D/g, ''); }
 
     function validateBeforeSubmit() {
       let valid = true;
@@ -236,9 +339,9 @@
       toggleError('memberBirth', 'birthError', birthOk, '생년월일은 6자리 숫자만 입력해야 합니다. (예: 960101)');
       if (!birthOk) valid = false;
 
-      const amount = Number(document.getElementById('contractAmount').value);
+      const amount = Number(getAmountDigits());
       const amountUnitOk = amount > 0 && amount % 10000 === 0;
-      toggleError('contractAmount', 'amountError', amountUnitOk, '금액은 만원 단위로 입력해야 합니다. (예: 220000)');
+      toggleError('contractAmount', 'amountError', amountUnitOk, '천원 단위 무조건 절상 해야 합니다. (예: 223000->230000)');
       if (!amountUnitOk) valid = false;
 
       const dbSourceOk = document.getElementById('dbSource').value.trim() !== '';
@@ -271,7 +374,7 @@
         userId: currentUser.id,
         productName: document.getElementById('productName').value,
         durationMonths: document.getElementById('durationMonths').value,
-        contractAmount: document.getElementById('contractAmount').value,
+        contractAmount: getAmountDigits(),   // 쉼표 제거한 순수 숫자로 전송
         memberName: document.getElementById('memberName').value.trim(),
         memberBirth: document.getElementById('memberBirth').value.trim(),
         memberPhone: document.getElementById('memberPhone').value.trim(),
@@ -295,53 +398,224 @@
       }
     }
 
+    // ---------- 내 신청 내역 ----------
     async function loadMyApplications() {
       if (!currentUser) return;
       document.getElementById('listContainer').innerHTML = '<div class="card">불러오는 중...</div>';
       try {
         const list = await apiGet('getMyApplications', { userId: currentUser.id });
+        currentList = list;
         if (!list.length) {
           document.getElementById('listContainer').innerHTML = '<div class="card">신청 내역이 없습니다.</div>';
           return;
         }
         document.getElementById('listContainer').innerHTML = list.map(renderCard).join('');
       } catch (err) {
-        document.getElementById('listContainer').innerHTML = '<div class="msg msg-error">' + err.message + '</div>';
+        document.getElementById('listContainer').innerHTML = '<div class="msg msg-error">' + esc(err.message) + '</div>';
       }
     }
 
-    function renderCard(item) {
+    function renderCard(item, i) {
       const isCancelled = item.statusMark !== 'ㅇ';
       const statusHtml = isCancelled
-        ? '<span class="status status-cancel">✕ ' + (item.statusMark || '미검수') + '</span>'
+        ? '<span class="status status-cancel">✕ ' + esc(item.statusMark || '미검수') + '</span>'
         : '<span class="status status-ok">ㅇ</span>';
+      const row = (label, value) => '<div class="field-row"><span>' + label + '</span><span>' + value + '</span></div>';
 
       return '<div class="card">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<strong>' + item.memberName + '</strong>' +
+          '<strong>' + esc(item.memberName) + '</strong>' +
           statusHtml +
         '</div>' +
-        '<div class="field-row"><span>제출시간</span><span>' + item.timestamp + '</span></div>' +
-        '<div class="field-row"><span>금액</span><span>' + Number(item.amount).toLocaleString('ko-KR') + '원</span></div>' +
-        '<div class="field-row"><span>카테고리</span><span>' + (item.category || '-') + '</span></div>' +
-        '<div class="field-row"><span>상품명</span><span>' + item.product + '</span></div>' +
-        '<div class="field-row"><span>계약기간</span><span>' + (item.duration || '-') + '</span></div>' +
-        '<div class="field-row"><span>계약시작일</span><span>' + item.startDate + '</span></div>' +
-        '<div class="field-row"><span>계약종료일</span><span>' + item.endDate + '</span></div>' +
-        '<div class="field-row"><span>회원 생년월일</span><span>' + (item.memberBirth || '-') + '</span></div>' +
-        '<div class="field-row"><span>회원 전화번호</span><span>' + (item.memberPhone || '-') + '</span></div>' +
-        '<div class="field-row"><span>회원 주소</span><span>' + (item.memberAddress || '-') + '</span></div>' +
-        '<div class="field-row"><span>담당자</span><span>' + (item.manager || '-') + '</span></div>' +
-        '<div class="field-row"><span>지원자</span><span>' + (item.applicantName || '-') + '</span></div>' +
-        '<div class="field-row"><span>DB출처</span><span>' + (item.dbSource || '-') + '</span></div>' +
-        '<div class="field-row"><span>특이사항</span><span>' + (item.specialNotes || '-') + '</span></div>' +
+        row('제출시간', esc(item.timestamp)) +
+        row('금액', '<span class="amount-strong">' + Number(item.amount).toLocaleString('ko-KR') + '원</span>') +
+        row('카테고리', esc(item.category || '-')) +
+        row('상품명', esc(item.product)) +
+        row('계약기간', esc(item.duration || '-')) +
+        row('계약시작일', esc(item.startDate)) +
+        row('계약종료일', esc(item.endDate)) +
+        row('회원 생년월일', esc(item.memberBirth || '-')) +
+        row('회원 전화번호', esc(item.memberPhone || '-')) +
+        row('회원 주소', esc(item.memberAddress || '-')) +
+        row('담당자', esc(item.manager || '-')) +
+        row('지원자', esc(item.applicantName || '-')) +
+        row('DB출처', esc(item.dbSource || '-')) +
+        row('특이사항', esc(item.specialNotes || '-')) +
         '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd; font-size:12px; color:#2563eb; font-weight:bold;">심사 현황</div>' +
-        '<div class="field-row"><span>완납 날짜</span><span>' + item.review.paidDate + '</span></div>' +
-        '<div class="field-row"><span>첫 결제 시간</span><span>' + item.review.firstPayTime + '</span></div>' +
-        '<div class="field-row"><span>계약서 검수</span><span>' + item.review.contractCheck + '</span></div>' +
-        '<div class="field-row"><span>서명 완료 시간</span><span>' + item.review.signatureTime + '</span></div>' +
-        '<div class="field-row"><span>해피콜 접수날짜</span><span>' + item.review.happyCallDate + '</span></div>' +
+        row('완납 날짜', esc(item.review.paidDate)) +
+        row('첫 결제 시간', esc(item.review.firstPayTime)) +
+        row('계약서 검수', esc(item.review.contractCheck)) +
+        row('서명 완료 시간', esc(item.review.signatureTime)) +
+        row('해피콜 접수날짜', esc(item.review.happyCallDate)) +
+
+        '<div class="btn-row">' +
+          '<button class="btn-sub" onclick="toggleSub(' + i + ', \'inq\')">📨 문의요청</button>' +
+          '<button class="btn-sub" onclick="toggleSub(' + i + ', \'hc\')">📎 해피콜제출</button>' +
+        '</div>' +
+
+        // 문의요청 패널
+        '<div class="sub-panel" id="inqPanel_' + i + '">' +
+          '<label>문의 / 수정 요청 내용</label>' +
+          '<textarea id="inqText_' + i + '" maxlength="1500" placeholder="위 신청 내용을 보시고, 문의하거나 수정할 내용을 입력해 주세요."></textarea>' +
+          '<div class="hint-text">담당자에게는 제출시간·회원명·상품·금액과 입력하신 내용만 전달됩니다.</div>' +
+          '<button class="btn-go" id="inqBtn_' + i + '" onclick="doInquiry(' + i + ')">문의하기</button>' +
+          '<div class="sub-msg" id="inqMsg_' + i + '"></div>' +
+        '</div>' +
+
+        // 해피콜제출 패널
+        '<div class="sub-panel" id="hcPanel_' + i + '">' +
+          '<label>파일 제목 (필요하면 진행자 이름 등을 직접 추가·수정하세요)</label>' +
+          '<input id="hcTitle_' + i + '">' +
+          '<div class="hint-text">담당자_회원명_상품명_결제일자_오늘일자_본부</div>' +
+          '<button class="btn-go" id="hcBtn_' + i + '" onclick="doHappycall(' + i + ')">복사하고 채팅으로 이동</button>' +
+          '<div class="hint-text" style="margin-top:6px;">채팅창에서 파일을 첨부한 뒤, 설명(캡션) 칸에 붙여넣기 하고 전송하세요.</div>' +
+          '<div class="sub-msg" id="hcMsg_' + i + '"></div>' +
+        '</div>' +
       '</div>';
+    }
+
+    function setSubMsg(id, text, type) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '<div class="msg msg-' + type + '">' + esc(text) + '</div>';
+      setTimeout(function () { if (el) el.innerHTML = ''; }, 6000);
+    }
+
+    function toggleSub(i, kind) {
+      const inq = document.getElementById('inqPanel_' + i);
+      const hc = document.getElementById('hcPanel_' + i);
+      const target = kind === 'inq' ? inq : hc;
+      const other = kind === 'inq' ? hc : inq;
+      other.style.display = 'none';
+      const opening = target.style.display !== 'block';
+      target.style.display = opening ? 'block' : 'none';
+      if (opening && kind === 'hc') {
+        document.getElementById('hcTitle_' + i).value = buildHcTitle(currentList[i]);  // 열 때마다 오늘 날짜 기준으로 새로 생성
+      }
+    }
+
+    // ---------- 문의요청 ----------
+    async function doInquiry(i) {
+      const item = currentList[i];
+      const ta = document.getElementById('inqText_' + i);
+      const btn = document.getElementById('inqBtn_' + i);
+      const text = ta.value.trim();
+      if (!text) { setSubMsg('inqMsg_' + i, '문의 내용을 입력해 주세요.', 'error'); return; }
+
+      btn.disabled = true;
+      const oldLabel = btn.textContent;
+      btn.textContent = '전송 중...';
+      try {
+        await workerPost('/api/inquiry', {
+          text: text,
+          order: { timestamp: item.timestamp, memberName: item.memberName, product: item.product, amount: item.amount }
+        });
+        ta.value = '';
+        setSubMsg('inqMsg_' + i, '접수되었습니다. 답변은 봇 채팅으로 안내됩니다.', 'success');
+      } catch (err) {
+        setSubMsg('inqMsg_' + i, err.message || '전송에 실패했습니다.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldLabel;
+      }
+    }
+
+    // ---------- 해피콜 제출 ----------
+    // 파일 제목: 담당자_회원명_상품명_결제일자_오늘일자_본부  (결제일자 = 완납 날짜, 비어 있으면 빈칸 그대로)
+    function buildHcTitle(item) {
+      const clean = function (v) { return (v == null || v === '-') ? '' : String(v).trim(); };
+      return [item.manager, item.memberName, item.product, item.paidYmd, todayYmd(), item.dept].map(clean).join('_');
+    }
+
+    async function copyToClipboard(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (e) { /* 아래 대체 방법 시도 */ }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function doHappycall(i) {
+      const input = document.getElementById('hcTitle_' + i);
+      const title = input.value.trim();
+      if (!title) { setSubMsg('hcMsg_' + i, '제목이 비어 있습니다.', 'error'); return; }
+
+      const ok = await copyToClipboard(title);
+      if (!ok) {
+        input.focus();
+        input.select();
+        setSubMsg('hcMsg_' + i, '자동 복사에 실패했습니다. 위 제목을 길게 눌러 직접 복사한 뒤 채팅으로 이동해 주세요.', 'warn');
+        return;
+      }
+      setSubMsg('hcMsg_' + i, '복사되었습니다. 채팅창에서 파일을 첨부하고 설명(캡션)에 붙여넣기 하세요.', 'success');
+
+      setTimeout(function () {
+        const tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg) return;
+        if (BOT_USERNAME) tg.openTelegramLink('https://t.me/' + BOT_USERNAME);
+        else tg.close();
+      }, 900);
+    }
+
+    // ---------- 입금조회 ----------
+    document.getElementById('depName').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); doDepositSearch(); }
+    });
+
+    async function doDepositSearch() {
+      const name = document.getElementById('depName').value.trim();
+      const date = document.getElementById('depDate').value || todayIso();
+      const msgEl = document.getElementById('depMsg');
+      const resEl = document.getElementById('depResult');
+      const btn = document.getElementById('depBtn');
+      msgEl.innerHTML = '';
+      if (!name) { msgEl.innerHTML = '<div class="msg msg-error">입금자 성명을 입력해 주세요.</div>'; return; }
+
+      btn.disabled = true;
+      resEl.innerHTML = '<div class="hint-text" style="text-align:center;">조회 중...</div>';
+      try {
+        const r = await workerPost('/api/deposit', { name: name, date: date });
+        resEl.innerHTML = renderDepositResult(r, name);
+      } catch (err) {
+        resEl.innerHTML = '';
+        msgEl.innerHTML = '<div class="msg msg-error">' + esc(err.message || '조회에 실패했습니다.') + '</div>';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function renderDepositResult(r, name) {
+      if (!r.matches || !r.matches.length) {
+        return '<div class="msg msg-warn">' + esc(r.date) + ' 기준, "' + esc(name) + '"와 일치하는 입금 내역이 없습니다.</div>';
+      }
+      let html = '';
+      if (r.fuzzy) {
+        html += '<div class="msg msg-warn">⚠️ 정확히 일치하는 성명이 없어, 같은 날짜의 유사한 성명 기록을 표시합니다. 입금자명과 날짜를 다시 확인해 주세요.</div>';
+      }
+      html += '<div class="hint-text" style="margin-bottom:6px;">' + esc(r.date) + ' 입금 내역 (' + r.matches.length + '건)</div>';
+      html += r.matches.map(function (m) {
+        return '<div class="dep-item">' +
+          '<div class="dep-name">👤 ' + esc(m.depositor) + '</div>' +
+          '<div>💵 <span class="dep-amount">' + esc(m.amount) + '원</span></div>' +
+          '<div>⏰ ' + esc(m.time) + '</div>' +
+        '</div>';
+      }).join('');
+      return html;
     }
   </script>
 </body>
