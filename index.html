@@ -30,7 +30,7 @@
     .msg-warn { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .manager-box { background: #eff6ff; border-radius: 8px; padding: 10px; margin-bottom: 14px; font-size: 13px; }
     .field-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
-    .field-row span:first-child { color: #888; }
+    .field-row > span:first-child { color: #888; }   /* 왼쪽 라벨 칸만 회색 (값 칸 안쪽 span에는 적용 안 됨) */
     .amount-strong { font-weight: 700; color: #2563eb; }
 
     /* 신청 내역 카드 하단 버튼 / 펼침 패널 */
@@ -137,13 +137,14 @@
     <!-- ③ 입금조회 -->
     <div id="panelDeposit" class="card" style="display:none;">
       <h2>입금 조회</h2>
+      <div class="msg msg-warn" id="depNotice">※ 당월 입금 내역만 조회할 수 있습니다.</div>
 
       <label>입금자 성명 *</label>
       <input id="depName" placeholder="입금자 성명" autocomplete="off">
 
       <label>조회 날짜</label>
       <input id="depDate" type="date">
-      <div class="hint-text">기본값은 오늘 날짜입니다.</div>
+      <div class="hint-text">기본값은 오늘 날짜이며, 이번 달 안에서만 선택할 수 있습니다.</div>
 
       <div id="depMsg"></div>
       <button id="depBtn" onclick="doDepositSearch()">조회하기</button>
@@ -185,7 +186,10 @@
         document.getElementById('myIdBox').style.display = 'block';
         document.getElementById('myIdBox').textContent = '내 텔레그램ID: ' + currentUser.id;
         document.getElementById('appContent').style.display = 'block';
-        document.getElementById('depDate').value = todayIso();
+        const depDate = document.getElementById('depDate');
+        depDate.value = todayIso();
+        depDate.min = todayIso().slice(0, 8) + '01';   // 이번 달 1일부터
+        depDate.max = todayIso();                         // 오늘까지
         loadManagerAndOptions();
         const initialView = getInitialView();
         switchTab(initialView);        // Open 버튼(?view=deposit)이면 입금조회, ☰ 메뉴면 신청서 작성
