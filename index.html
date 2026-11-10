@@ -190,6 +190,7 @@
         depDate.value = todayIso();
         depDate.min = todayIso().slice(0, 8) + '01';   // 이번 달 1일부터
         depDate.max = todayIso();                         // 오늘까지
+        document.getElementById('startDate').value = todayIso();   // 계약 시작일 기본값 = 오늘 (필요하면 직접 수정)
         loadManagerAndOptions();
         const initialView = getInitialView();
         switchTab(initialView);        // Open 버튼(?view=deposit)이면 입금조회, ☰ 메뉴면 신청서 작성
@@ -422,8 +423,9 @@
       try {
         await apiPost(payload);
         showMsg('제출 완료! 텔레그램으로 확인 메시지가 발송되었습니다.', 'success');
-        ['memberName','memberBirth','memberPhone','memberAddress','applicantName','startDate','dbSource','specialNotes','contractAmount']
+        ['memberName','memberBirth','memberPhone','memberAddress','applicantName','dbSource','specialNotes','contractAmount']
           .forEach(id => document.getElementById(id).value = '');
+        document.getElementById('startDate').value = todayIso();   // 다음 신청도 기본값은 오늘
       } catch (err) {
         showMsg(err.message || '제출 실패', 'error');
       } finally {
